@@ -147,3 +147,110 @@ body.dark .chart-box {
   cursor: pointer;
 }
 
+
+/* 🌿 BASE */
+body{
+  background:#f4f6f9;
+  font-family:Segoe UI;
+}
+
+/* HEADER */
+.header{
+  background:linear-gradient(135deg,#0f766e,#14b8a6);
+  color:white;
+  padding:18px;
+  border-radius:16px;
+  box-shadow:0 10px 25px rgba(0,0,0,.15);
+}
+
+/* CARDS */
+.card-box{
+  padding:20px;
+  border-radius:18px;
+  color:white;
+  box-shadow:0 8px 20px rgba(0,0,0,.1);
+  transition:0.3s;
+}
+
+.card-box:hover{
+  transform:translateY(-6px);
+}
+
+.c1{background:linear-gradient(135deg,#2563eb,#60a5fa)}
+.c2{background:linear-gradient(135deg,#10b981,#34d399)}
+.c3{background:linear-gradient(135deg,#f59e0b,#fbbf24)}
+.c4{background:linear-gradient(135deg,#ef4444,#f87171)}
+
+/* TABLE */
+.table-box{
+  background:white;
+  padding:18px;
+  border-radius:18px;
+  margin-top:20px;
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+  transition:0.3s;
+}
+
+.table-box:hover{
+  transform:translateY(-2px);
+}
+
+table{
+  width:100%;
+  border-radius:12px;
+  overflow:hidden;
+}
+
+/* THEAD */
+thead th{
+  background:#0f766e;
+  color:white;
+  padding:12px;
+}
+
+/* TBODY */
+tbody td{
+  padding:10px;
+  text-align:center;
+}
+
+tbody tr{
+  transition:0.2s;
+}
+
+tbody tr:hover{
+  background:#e6fffa;
+  transform:scale(1.01);
+}
+
+/* CHARTS */
+.charts{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+  gap:15px;
+  margin-top:25px;
+}
+
+.chart-box{
+  background:white;
+  padding:15px;
+  border-radius:18px;
+  height:320px;
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+/* BUTTON */
+.btn-teal{
+  background:#14b8a6;
+  color:white;
+  border:none;
+  border-radius:10px;
+  padding:10px;
+  transition:0.3s;
+}
+
+.btn-teal:hover{
+  background:#0f766e;
+  box-shadow:0 0 10px #14b8a6;
+}
+

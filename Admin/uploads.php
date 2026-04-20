@@ -1,17 +1,55 @@
 <?php
 session_start();
+
 if (isset($_SESSION['admin_login'])) {
 
   include('includes/temp/init.php');
   include('includes/temp/navbar.php');
 
-
-  $page = isset($_GET['page']) ? $_GET['page'] : 'All';
+  $page = $_GET['page'] ?? 'All';
   $id   = isset($_GET['id']) ? (int)$_GET['id'] : null;
   $error = '';
 
+  /* ================= CSV IMPORT ================= */
+  if (isset($_POST['upload_csv'])) {
+
+    if (!empty($_FILES['csv_file']['tmp_name'])) {
+
+      $file = fopen($_FILES['csv_file']['tmp_name'], "r");
+
+      while (($data = fgetcsv($file, 1000, ",")) !== FALSE) {
+
+        if (count($data) >= 2) {
+
+          $file_name   = trim($data[0]);
+          $uploaded_by = trim($data[1]);
+
+          if ($file_name != "" && $uploaded_by != "") {
+
+            $stmt = $connect->prepare("
+              INSERT INTO uploads (file_name, uploaded_by, uploaded_at)
+              VALUES (?, ?, ?)
+            ");
+
+            $stmt->execute([
+              $file_name,
+              $uploaded_by,
+              date('Y-m-d H:i:s')
+            ]);
+          }
+        }
+      }
+
+      fclose($file);
+
+      $_SESSION['message'] = "CSV Imported Successfully";
+      header("Location: uploads.php");
+      exit;
+    }
+  }
+
   /* ================= CREATE + EDIT ================= */
-  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['upload_csv'])) {
 
     $file_name   = trim($_POST['file_name'] ?? '');
     $uploaded_by = trim($_POST['uploaded_by'] ?? '');
@@ -23,14 +61,14 @@ if (isset($_SESSION['admin_login'])) {
       if ($page === 'create') {
 
         $stmt = $connect->prepare("
-                INSERT INTO uploads (file_name, uploaded_by, uploaded_at)
-                VALUES (:file_name, :uploaded_by, :uploaded_at)
-            ");
+          INSERT INTO uploads (file_name, uploaded_by, uploaded_at)
+          VALUES (?, ?, ?)
+        ");
 
         $stmt->execute([
-          ':file_name'   => $file_name,
-          ':uploaded_by' => $uploaded_by,
-          ':uploaded_at' => date('Y-m-d H:i:s'),
+          $file_name,
+          $uploaded_by,
+          date('Y-m-d H:i:s')
         ]);
 
         $_SESSION['message'] = 'Upload created successfully.';
@@ -41,15 +79,15 @@ if (isset($_SESSION['admin_login'])) {
       if ($page === 'edit' && $id) {
 
         $stmt = $connect->prepare("
-                UPDATE uploads 
-                SET file_name = :file_name, uploaded_by = :uploaded_by 
-                WHERE id = :id
-            ");
+          UPDATE uploads 
+          SET file_name = ?, uploaded_by = ?
+          WHERE id = ?
+        ");
 
         $stmt->execute([
-          ':file_name'   => $file_name,
-          ':uploaded_by' => $uploaded_by,
-          ':id'          => $id,
+          $file_name,
+          $uploaded_by,
+          $id
         ]);
 
         $_SESSION['message'] = 'Upload updated successfully.';
@@ -62,8 +100,8 @@ if (isset($_SESSION['admin_login'])) {
   /* ================= DELETE ================= */
   if ($page === 'delete' && $id) {
 
-    $stmt = $connect->prepare("DELETE FROM uploads WHERE id = :id");
-    $stmt->execute([':id' => $id]);
+    $stmt = $connect->prepare("DELETE FROM uploads WHERE id = ?");
+    $stmt->execute([$id]);
 
     $_SESSION['message'] = 'Upload deleted successfully.';
     header('Location: uploads.php');
@@ -75,8 +113,8 @@ if (isset($_SESSION['admin_login'])) {
 
   if (($page === 'edit' || $page === 'show') && $id) {
 
-    $stmt = $connect->prepare("SELECT * FROM uploads WHERE id = :id");
-    $stmt->execute([':id' => $id]);
+    $stmt = $connect->prepare("SELECT * FROM uploads WHERE id = ?");
+    $stmt->execute([$id]);
     $upload = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$upload) {
@@ -90,7 +128,44 @@ if (isset($_SESSION['admin_login'])) {
   if ($page === 'All') {
     $uploads = $connect->query("SELECT * FROM uploads")->fetchAll();
   }
+
+  /* ================= GET RESEARCHERS ================= */
+  $researchers = $connect->query("SELECT id, name FROM researchers")->fetchAll();
 ?>
+
+  <style>
+    .table-box {
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, .08);
+    }
+
+    table {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    th {
+      background: #0d6efd;
+      color: white;
+      text-align: center;
+    }
+
+    td {
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    tr:hover {
+      background: #f1f7ff;
+      transition: 0.2s;
+    }
+
+    .btn i {
+      margin-right: 4px;
+    }
+  </style>
 
   <div class="container my-5">
     <div class="row justify-content-center">
@@ -118,7 +193,32 @@ if (isset($_SESSION['admin_login'])) {
             <h3 class="page-title mb-0">
               <i class="fa fa-file-upload"></i> Uploads
             </h3>
-            <a href="?page=create" class="btn btn-success btn-sm">+ Add Upload</a>
+
+            <div>
+              <a href="csv.php" class="btn btn-info btn-sm">
+                <i class="fas fa-file-csv"></i> CSV
+              </a>
+
+              <button class="btn btn-warning btn-sm" data-bs-toggle="collapse" data-bs-target="#csvBox">
+                <i class="fas fa-upload"></i> Import
+              </button>
+
+              <a href="?page=create" class="btn btn-success btn-sm">
+                <i class="fas fa-plus"></i> Add
+              </a>
+            </div>
+          </div>
+
+          <!-- CSV BOX -->
+          <div id="csvBox" class="collapse mb-3">
+            <div class="table-box p-3">
+              <form method="POST" enctype="multipart/form-data">
+                <input type="file" name="csv_file" class="form-control mb-2" required>
+                <button name="upload_csv" class="btn btn-primary btn-sm">
+                  <i class="fas fa-file-upload"></i> Upload CSV
+                </button>
+              </form>
+            </div>
           </div>
 
           <div class="table-box">
@@ -134,125 +234,99 @@ if (isset($_SESSION['admin_login'])) {
               </thead>
 
               <tbody>
-                <?php if (!empty($uploads)): ?>
-                  <?php foreach ($uploads as $u): ?>
-                    <tr>
-                      <td><?= htmlspecialchars($u['id']) ?></td>
-                      <td><?= htmlspecialchars($u['file_name']) ?></td>
-                      <td><?= htmlspecialchars($u['uploaded_by']) ?></td>
-                      <td><?= htmlspecialchars($u['uploaded_at']) ?></td>
-                      <td>
-                        <a href="?page=show&id=<?= $u['id'] ?>" class="btn btn-sm btn-success"><i class="fas fa-eye"></i></a>
-                        <a href="?page=edit&id=<?= $u['id'] ?>" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i></a>
-                        <a href="?page=delete&id=<?= $u['id'] ?>" class="btn btn-sm btn-danger"
-                          onclick="return confirm('Delete this upload?');">
-                          <i class="fas fa-trash"></i>
-                        </a>
-                      </td>
-                    </tr>
-                  <?php endforeach; ?>
-                <?php else: ?>
+                <?php foreach ($uploads as $u): ?>
                   <tr>
-                    <td colspan="5">No uploads found</td>
+                    <td><?= $u['id'] ?></td>
+                    <td><?= htmlspecialchars($u['file_name']) ?></td>
+                    <td><?= htmlspecialchars($u['uploaded_by']) ?></td>
+                    <td><?= $u['uploaded_at'] ?></td>
+                    <td>
+                      <a href="?page=show&id=<?= $u['id'] ?>" class="btn btn-success btn-sm"><i class="fas fa-eye"></i></a>
+                      <a href="?page=edit&id=<?= $u['id'] ?>" class="btn btn-primary btn-sm"><i class="fas fa-edit"></i></a>
+                      <a href="?page=delete&id=<?= $u['id'] ?>" class="btn btn-danger btn-sm"
+                        onclick="return confirm('Delete?')"><i class="fas fa-trash"></i></a>
+                    </td>
                   </tr>
-                <?php endif; ?>
+                <?php endforeach; ?>
               </tbody>
-
             </table>
           </div>
 
-          <!-- ================= CREATE ================= -->
+          <!-- ================= CREATE (FIXED) ================= -->
         <?php elseif ($page === 'create'): ?>
 
-          <h3 class="page-title mb-4">
-            <i class="fa fa-file-upload"></i> Add Upload
-          </h3>
+          <h3 class="mb-4">Add Upload</h3>
 
           <div class="table-box p-4">
             <form method="post">
 
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label">File Name</label>
-                  <input type="text" name="file_name" class="form-control" required>
-                </div>
+              <input type="text" name="file_name" class="form-control mb-3" placeholder="File Name" required>
 
-                <div class="col-md-6">
-                  <label class="form-label">Uploaded By</label>
-                  <input type="text" name="uploaded_by" class="form-control" required>
-                </div>
-              </div>
+              <select name="uploaded_by" class="form-control mb-3" required>
+                <option value="">Select Researcher</option>
+                <?php foreach ($researchers as $r): ?>
+                  <option value="<?= $r['id'] ?>">
+                    <?= htmlspecialchars($r['name']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
 
-              <div class="mt-4">
-                <button class="btn btn-primary">Create</button>
-                <a href="uploads.php" class="btn btn-secondary ms-2">Cancel</a>
-              </div>
-
+              <button class="btn btn-primary">Create</button>
+              <a href="uploads.php" class="btn btn-secondary">Cancel</a>
             </form>
           </div>
 
           <!-- ================= EDIT ================= -->
         <?php elseif ($page === 'edit'): ?>
 
-          <h3 class="page-title mb-4">
-            <i class="fa fa-file-upload"></i> Edit Upload
-          </h3>
+          <h3 class="mb-4">Edit Upload</h3>
 
           <div class="table-box p-4">
             <form method="post">
 
-              <div class="row g-3">
-                <div class="col-md-6">
-                  <label class="form-label">File Name</label>
-                  <input type="text" name="file_name" class="form-control"
-                    value="<?= htmlspecialchars($upload['file_name']) ?>" required>
-                </div>
+              <input type="text" name="file_name" class="form-control mb-3"
+                value="<?= htmlspecialchars($upload['file_name']) ?>" required>
 
-                <div class="col-md-6">
-                  <label class="form-label">Uploaded By</label>
-                  <input type="text" name="uploaded_by" class="form-control"
-                    value="<?= htmlspecialchars($upload['uploaded_by']) ?>" required>
-                </div>
-              </div>
+              <select name="uploaded_by" class="form-control mb-3" required>
+                <?php foreach ($researchers as $r): ?>
+                  <option value="<?= $r['id'] ?>"
+                    <?= $upload['uploaded_by'] == $r['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($r['name']) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
 
-              <div class="mt-4">
-                <button class="btn btn-primary">Update</button>
-                <a href="uploads.php" class="btn btn-secondary ms-2">Cancel</a>
-              </div>
-
+              <button class="btn btn-primary">Update</button>
+              <a href="uploads.php" class="btn btn-secondary">Cancel</a>
             </form>
           </div>
 
           <!-- ================= SHOW ================= -->
         <?php elseif ($page === 'show'): ?>
 
-          <h3 class="page-title mb-4">
-            <i class="fa fa-file-upload"></i> Upload Details
-          </h3>
+          <h3 class="mb-4">Upload Details</h3>
 
           <div class="table-box p-4">
             <table class="table table-borderless">
-              <tbody>
-                <tr>
-                  <th>ID</th>
-                  <td><?= $upload['id'] ?></td>
-                </tr>
-                <tr>
-                  <th>File Name</th>
-                  <td><?= htmlspecialchars($upload['file_name']) ?></td>
-                </tr>
-                <tr>
-                  <th>Uploaded By</th>
-                  <td><?= htmlspecialchars($upload['uploaded_by']) ?></td>
-                </tr>
-                <tr>
-                  <th>Uploaded At</th>
-                  <td><?= htmlspecialchars($upload['uploaded_at']) ?></td>
-                </tr>
-              </tbody>
+              <tr>
+                <th>ID</th>
+                <td><?= $upload['id'] ?></td>
+              </tr>
+              <tr>
+                <th>File Name</th>
+                <td><?= htmlspecialchars($upload['file_name']) ?></td>
+              </tr>
+              <tr>
+                <th>Uploaded By</th>
+                <td><?= htmlspecialchars($upload['uploaded_by']) ?></td>
+              </tr>
+              <tr>
+                <th>Date</th>
+                <td><?= $upload['uploaded_at'] ?></td>
+              </tr>
             </table>
 
-            <a href="uploads.php" class="btn btn-secondary btn-sm mt-3">Back</a>
+            <a href="uploads.php" class="btn btn-secondary">Back</a>
           </div>
 
         <?php endif; ?>
@@ -268,10 +342,10 @@ if (isset($_SESSION['admin_login'])) {
   </script>
 
 <?php
+  include('includes/temp/footer.php');
 } else {
   $_SESSION['message_login'] = "Login First";
   header("Location: ../login.php");
   exit();
 }
-include('includes/temp/footer.php');
 ?>
