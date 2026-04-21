@@ -126,10 +126,21 @@ while ($d = $dRes->fetch(PDO::FETCH_ASSOC)) {
       text-align: center;
     }
 
-    .c-low { background: #10b981 }
-    .c-medium { background: #f59e0b }
-    .c-high { background: #3b82f6 }
-    .c-critical { background: #ef4444 }
+    .c-low {
+      background: #10b981
+    }
+
+    .c-medium {
+      background: #f59e0b
+    }
+
+    .c-high {
+      background: #3b82f6
+    }
+
+    .c-critical {
+      background: #ef4444
+    }
 
     .table-box {
       background: white;
@@ -150,8 +161,10 @@ while ($d = $dRes->fetch(PDO::FETCH_ASSOC)) {
       color: white;
       padding: 12px;
       text-align: center;
+      border-radius: 12px;
+      border-bottom: 3px solid #0d5c56;
     }
-
+    
     td {
       background: #f9fafb;
       padding: 12px;
@@ -189,190 +202,191 @@ while ($d = $dRes->fetch(PDO::FETCH_ASSOC)) {
 
 <body>
 
-<div class="container py-4">
+  <div class="container py-4">
 
-<div class="header text-center">
-  <h4>🧠 Medical Dashboard</h4>
-</div>
-
-<!-- CARDS -->
-<div class="row mt-3 g-3">
-
-  <div class="col-md-3">
-    <div class="card-box c-low">
-      <i class="fa fa-leaf fa-2x mb-2"></i>
-      <div>Low</div>
-      <h2><?= $low ?></h2>
+    <div class="header text-center">
+      <h4>🧠 Medical Dashboard</h4>
     </div>
-  </div>
 
-  <div class="col-md-3">
-    <div class="card-box c-medium">
-      <i class="fa fa-exclamation-triangle fa-2x mb-2"></i>
-      <div>Medium</div>
-      <h2><?= $medium ?></h2>
+    <!-- CARDS -->
+    <div class="row mt-3 g-3">
+
+      <div class="col-md-3">
+        <div class="card-box c-low">
+          <i class="fa fa-leaf fa-2x mb-2"></i>
+          <div>Low</div>
+          <h2><?= $low ?></h2>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card-box c-medium">
+          <i class="fa fa-exclamation-triangle fa-2x mb-2"></i>
+          <div>Medium</div>
+          <h2><?= $medium ?></h2>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card-box c-high">
+          <i class="fa fa-chart-line fa-2x mb-2"></i>
+          <div>High</div>
+          <h2><?= $high ?></h2>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card-box c-critical">
+          <i class="fa fa-skull-crossbones fa-2x mb-2"></i>
+          <div>Critical</div>
+          <h2><?= $critical ?></h2>
+        </div>
+      </div>
+
     </div>
-  </div>
 
-  <div class="col-md-3">
-    <div class="card-box c-high">
-      <i class="fa fa-chart-line fa-2x mb-2"></i>
-      <div>High</div>
-      <h2><?= $high ?></h2>
+    <!-- ✅ SEARCH ADDED HERE (ONLY CHANGE) -->
+    <div class="table-box mt-3">
+
+      <form class="row g-2">
+
+        <div class="col-md-6">
+          <input name="search" class="form-control" value="<?= htmlspecialchars($search) ?>" placeholder="Search patient...">
+        </div>
+
+        <div class="col-md-4">
+          <select name="disease" class="form-control">
+            <option value="">All</option>
+            <option>Diabetes</option>
+            <option>Hypertension</option>
+            <option>Heart Disease</option>
+            <option>Asthma</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <button class="btn btn-success w-100">Filter</button>
+        </div>
+
+      </form>
+
     </div>
-  </div>
 
-  <div class="col-md-3">
-    <div class="card-box c-critical">
-      <i class="fa fa-skull-crossbones fa-2x mb-2"></i>
-      <div>Critical</div>
-      <h2><?= $critical ?></h2>
+    <!-- TABLE -->
+    <div class="table-box">
+
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Disease</th>
+          <th>BP</th>
+          <th>Sugar</th>
+          <th>BMI</th>
+          <th>Status</th>
+        </tr>
+
+        <?php foreach ($rows as $r): ?>
+          <tr>
+            <td><?= htmlspecialchars($r["name"]) ?></td>
+            <td><?= $r["disease_type"] ?></td>
+            <td><?= $r["blood_pressure"] ?></td>
+            <td><?= $r["sugar_level"] ?></td>
+            <td><?= $r["bmi"] ?></td>
+
+            <?php
+            $level = predict($r["blood_pressure"], $r["sugar_level"], $r["bmi"]);
+            $color = match ($level) {
+              "Low" => "#10b981",
+              "Medium" => "#f59e0b",
+              "High" => "#3b82f6",
+              "Critical" => "#ef4444"
+            };
+            ?>
+
+            <td>
+              <span class="badge-custom" style="background:<?= $color ?>">
+                <?= $level ?>
+              </span>
+            </td>
+
+          </tr>
+        <?php endforeach; ?>
+      </table>
+
     </div>
+
+    <!-- CHARTS (UNCHANGED) -->
+    <div class="row g-4 mt-3 align-items-stretch">
+
+      <div class="col-md-4 d-flex">
+        <div class="chart-box w-100"><canvas id="pie"></canvas></div>
+      </div>
+
+      <div class="col-md-4 d-flex">
+        <div class="chart-box w-100"><canvas id="bar"></canvas></div>
+      </div>
+
+      <div class="col-md-4 d-flex">
+        <div class="chart-box w-100"><canvas id="disease"></canvas></div>
+      </div>
+
+    </div>
+
   </div>
 
-</div>
-
-<!-- ✅ SEARCH ADDED HERE (ONLY CHANGE) -->
-<div class="table-box mt-3">
-
-<form class="row g-2">
-
-  <div class="col-md-6">
-    <input name="search" class="form-control" value="<?= htmlspecialchars($search) ?>" placeholder="Search patient...">
-  </div>
-
-  <div class="col-md-4">
-    <select name="disease" class="form-control">
-      <option value="">All</option>
-      <option>Diabetes</option>
-      <option>Hypertension</option>
-      <option>Heart Disease</option>
-      <option>Asthma</option>
-    </select>
-  </div>
-
-  <div class="col-md-2">
-    <button class="btn btn-success w-100">Filter</button>
-  </div>
-
-</form>
-
-</div>
-
-<!-- TABLE -->
-<div class="table-box">
-
-<table>
-  <tr>
-    <th>Name</th>
-    <th>Disease</th>
-    <th>BP</th>
-    <th>Sugar</th>
-    <th>BMI</th>
-    <th>Status</th>
-  </tr>
-
-  <?php foreach ($rows as $r): ?>
-    <tr>
-      <td><?= htmlspecialchars($r["name"]) ?></td>
-      <td><?= $r["disease_type"] ?></td>
-      <td><?= $r["blood_pressure"] ?></td>
-      <td><?= $r["sugar_level"] ?></td>
-      <td><?= $r["bmi"] ?></td>
-
-      <?php
-      $level = predict($r["blood_pressure"], $r["sugar_level"], $r["bmi"]);
-      $color = match ($level) {
-        "Low" => "#10b981",
-        "Medium" => "#f59e0b",
-        "High" => "#3b82f6",
-        "Critical" => "#ef4444"
-      };
-      ?>
-
-      <td>
-        <span class="badge-custom" style="background:<?= $color ?>">
-          <?= $level ?>
-        </span>
-      </td>
-
-    </tr>
-  <?php endforeach; ?>
-</table>
-
-</div>
-
-<!-- CHARTS (UNCHANGED) -->
-<div class="row g-4 mt-3 align-items-stretch">
-
-  <div class="col-md-4 d-flex">
-    <div class="chart-box w-100"><canvas id="pie"></canvas></div>
-  </div>
-
-  <div class="col-md-4 d-flex">
-    <div class="chart-box w-100"><canvas id="bar"></canvas></div>
-  </div>
-
-  <div class="col-md-4 d-flex">
-    <div class="chart-box w-100"><canvas id="disease"></canvas></div>
-  </div>
-
-</div>
-
-</div>
-
-<script>
-new Chart(document.getElementById("pie"), {
-  type: "pie",
-  data: {
-    labels: ["Low", "Medium", "High", "Critical"],
-    datasets: [{
-      data: [<?= $low ?>, <?= $medium ?>, <?= $high ?>, <?= $critical ?>],
-      backgroundColor: ["#10b981", "#f59e0b", "#3b82f6", "#ef4444"]
-    }]
-  }
-});
-
-new Chart(document.getElementById("bar"), {
-  type: "bar",
-  data: {
-    labels: [
-      <?php foreach ($rows as $r): ?> "<?= htmlspecialchars($r['name']) ?>",
-      <?php endforeach; ?>
-    ],
-    datasets: [{
-        label: "BP",
-        data: [
-          <?php foreach ($rows as $r): ?>
-            <?= $r["blood_pressure"] ?>,
-          <?php endforeach; ?>
-        ],
-        backgroundColor: "#3b82f6"
-      },
-      {
-        label: "Sugar",
-        data: [
-          <?php foreach ($rows as $r): ?>
-            <?= $r["sugar_level"] ?>,
-          <?php endforeach; ?>
-        ],
-        backgroundColor: "#ef4444"
+  <script>
+    new Chart(document.getElementById("pie"), {
+      type: "pie",
+      data: {
+        labels: ["Low", "Medium", "High", "Critical"],
+        datasets: [{
+          data: [<?= $low ?>, <?= $medium ?>, <?= $high ?>, <?= $critical ?>],
+          backgroundColor: ["#10b981", "#f59e0b", "#3b82f6", "#ef4444"]
+        }]
       }
-    ]
-  }
-});
+    });
 
-new Chart(document.getElementById("disease"), {
-  type: "pie",
-  data: {
-    labels: <?= json_encode(array_keys($diseaseData)) ?>,
-    datasets: [{
-      data: <?= json_encode(array_values($diseaseData)) ?>,
-      backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
-    }]
-  }
-});
-</script>
+    new Chart(document.getElementById("bar"), {
+      type: "bar",
+      data: {
+        labels: [
+          <?php foreach ($rows as $r): ?> "<?= htmlspecialchars($r['name']) ?>",
+          <?php endforeach; ?>
+        ],
+        datasets: [{
+            label: "BP",
+            data: [
+              <?php foreach ($rows as $r): ?>
+                <?= $r["blood_pressure"] ?>,
+              <?php endforeach; ?>
+            ],
+            backgroundColor: "#3b82f6"
+          },
+          {
+            label: "Sugar",
+            data: [
+              <?php foreach ($rows as $r): ?>
+                <?= $r["sugar_level"] ?>,
+              <?php endforeach; ?>
+            ],
+            backgroundColor: "#ef4444"
+          }
+        ]
+      }
+    });
+
+    new Chart(document.getElementById("disease"), {
+      type: "pie",
+      data: {
+        labels: <?= json_encode(array_keys($diseaseData)) ?>,
+        datasets: [{
+          data: <?= json_encode(array_values($diseaseData)) ?>,
+          backgroundColor: ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
+        }]
+      }
+    });
+  </script>
 
 </body>
+
 </html>
